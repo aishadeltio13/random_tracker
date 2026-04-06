@@ -1,45 +1,44 @@
 from random_movement import PersonMovementGenerator
-from google.cloud import pubsub_v1
 import json
 import random
-
-# Configuración de Pub/Sub
-PROJECT_ID = "dataproject2-492516"  # Reemplaza con el ID de tu proyecto
-TOPIC_ID = "topic-ingesta-entrenamientos"
+import os
 
 def main():
-    # 1. Instanciar el generador para Valencia
-    print("Descargando red de calles de Valencia...")
+    print("Inicializando el generador para Valencia...")
     generator = PersonMovementGenerator(place_name="Valencia, Valencian Community, Spain")
 
-    # 2. Generar un movimiento aleatorio
+    # 1. Generar variables aleatorias para la sesión
+    # Seleccionamos un número de waypoints aleatorio (entre 2 y 8)
+    # Esto determinará indirectamente la duración total de la ruta
+    puntos_ruta = random.randint(2, 8) 
+    
+    # Seleccionamos una velocidad base aleatoria para este jugador
+    # Por ejemplo, entre 1.0 m/s (caminar despacio) y 3.5 m/s (correr rápido)
+    velocidad_base_jugador = random.uniform(1.0, 3.5)
+
+    print(f"Simulando jugador con velocidad base: {velocidad_base_jugador:.2f} m/s y {puntos_ruta} waypoints.")
+
+    # 2. Generar el movimiento usando las variables aleatorias
     movimiento = generator.generate_timed_movement(
-        num_waypoints=5,
-        speed_mps=2.5 
+        num_waypoints=puntos_ruta,
+        base_speed_mps=velocidad_base_jugador 
     )
 
-    # 3. Estructurar el payload final
+    # 3. Estructurar el payload final para la ingesta
     payload_ingesta = {
         "jugador_id": f"jugador_{random.randint(1000, 9999)}",
-        "disciplina": "running",
         "estadisticas_entrenamiento": movimiento
     }
 
-    # 4. Inicializar el cliente publicador de Pub/Sub
-    publisher = pubsub_v1.PublisherClient()
-    topic_path = publisher.topic_path(PROJECT_ID, TOPIC_ID)
-
-    # 5. Formatear y publicar el mensaje
-    # Pub/Sub requiere que el payload sea un string de bytes
-    data_str = json.dumps(payload_ingesta)
-    data_bytes = data_str.encode("utf-8")
-
-    print(f"Publicando mensaje en el topic: {TOPIC_ID}...")
-    future = publisher.publish(topic_path, data=data_bytes)
+    # 4. Configurar el nombre y la ruta del archivo de salida
+    nombre_archivo = "codigo_pedro_modificado.json"
+    ruta_archivo = os.path.join(os.getcwd(), nombre_archivo)
     
-    # future.result() bloquea la ejecución hasta que se confirme la publicación
-    message_id = future.result()
-    print(f"Mensaje publicado exitosamente. ID del mensaje en Pub/Sub: {message_id}")
+    # 5. Guardar el payload
+    with open(ruta_archivo, "w", encoding="utf-8") as archivo:
+        json.dump(payload_ingesta, archivo, indent=4, ensure_ascii=False)
+
+    print(f"Proceso finalizado. Archivo guardado en: {ruta_archivo}")
 
 if __name__ == "__main__":
     main()

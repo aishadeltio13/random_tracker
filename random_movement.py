@@ -216,7 +216,7 @@ class PersonMovementGenerator:
             'num_points': len(all_coordinates)
         }
     
-    def generate_timed_movement(self, num_waypoints=5, speed_mps=1.4, 
+    def generate_timed_movement(self, num_waypoints=5, base_speed_mps=1.4, 
                                 start_time=None):
         """
         Generate a movement path with timestamps.
@@ -252,7 +252,11 @@ class PersonMovementGenerator:
             distance = self.graph[route[i]][route[i+1]][0]['length']
             
             # Calculate time to travel this distance
-            travel_time = distance / speed_mps
+            import random
+            speed_variation = random.uniform(0.85, 1.15)
+            current_speed = base_speed_mps * speed_variation
+            
+            travel_time = distance / current_speed
             current_time += timedelta(seconds=travel_time)
             
             timed_points.append({
@@ -261,11 +265,15 @@ class PersonMovementGenerator:
                 'longitude': coordinates[i+1][1]
             })
         
+        total_duration = (current_time - start_time).total_seconds()
+        
+        real_average_speed = path_data['total_distance_meters'] / total_duration if total_duration > 0 else 0
+
         return {
             'movements': timed_points,
             'total_distance_meters': path_data['total_distance_meters'],
-            'total_duration_seconds': (current_time - start_time).total_seconds(),
-            'average_speed_mps': speed_mps
+            'total_duration_seconds': total_duration,
+            'average_speed_mps': real_average_speed
         }
     
     def write_element(self, position, filename, mode='a'):
